@@ -1,0 +1,28 @@
+# 来源与授权说明
+
+本仓库只包含**移植工作本身**（构建脚本、ABI 审计工具、补丁、文档），
+不包含任何 Apple 的二进制或 Apple Music 的素材。
+
+## 各部分的来源
+
+| 内容 | 来源 | 授权 |
+| --- | --- | --- |
+| `scripts/` 下的构建与审计脚本 | 本次移植新增 | 与主项目一致（Apache-2.0） |
+| `patches/lite-*.patch` | Andrew05213/applemusic-downloader-native | Apache-2.0 |
+| `patches/shim.cpp` | 本次移植新增 | Apache-2.0 |
+| `reports/` | 本次移植的实测记录 | Apache-2.0 |
+| 运行时所需的 Apple 原生库 | Apple Music（专有） | **不随本仓库分发** |
+
+## 重要声明
+
+1. **本仓库不提供也不授权任何 Apple 的二进制材料。** 运行时需要的
+   `libCoreFP.so`、`libCoreADI.so`、`libstoreservicescore.so` 等属于 Apple，
+   请自行从你合法拥有的设备或安装包中取得。
+
+2. 上游 `wrapper`（WorldObservationLog/wrapper）采用 MIT 授权；本仓库**不包含**其源码，
+   只提供若干针对 arm64 的补丁和构建说明。首次构建需要自行拉取上游源码。
+
+3. 本项目不构成对任何 DRM 绕过行为的授权或鼓励。使用者需自行确认其行为符合
+   所在地法律以及 Apple 的服务条款。原作者与本仓库贡献者不对滥用负责。
+
+4. `docs/` 与 `reports/` 中的分析结论基于特定版本的实测，不保证适用于其他版本。

@@ -1,0 +1,23 @@
+# Apple 的专有二进制：绝不入库
+*.so
+*.a
+amlibs/
+amlibs-apple/
+amlibs-official/
+amlibs-filtered/
+ndk/
+wrapper.tar.gz
+wrapper-arm64/
+
+# 构建产物与中间目录
+build/
+wsrc/
+wsrc2/
+*.tar.gz
+*.zip
+
+# 凭据与日志
+.cred
+*.log
+__pycache__/
+*.pyc
