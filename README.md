@@ -64,7 +64,7 @@ cp ndk/usr/lib/aarch64-linux-android/libclang_rt.builtins-aarch64-android.a \
 # 2. Dobby
 ./scripts/build_dobby.sh
 
-# 3. Apple 原生库（见上面的授权警告）
+# 3. Apple 原生库：优先取本仓库 vendor 附件，取不到再回退上游发布包
 ./scripts/fetch_official_arm64.sh
 
 # 4. wrapper 源码（锁定 commit，应用原项目三个补丁）
