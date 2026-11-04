@@ -3,10 +3,9 @@
 把 Windows 版的原生引擎（wrapper 的 `lite`）跑在 **arm64 Android** 上。
 无 QEMU、无 chroot、无 root、无 Debian 内核。
 
-> ⚠️ **授权警告**：本目录不含任何 Apple 二进制。运行时需要的 `libCoreFP.so`、
+> ⚠️ **本仓库不包含、也不分发任何 Apple 的二进制。** 运行时需要的 `libCoreFP.so`、
 > `libCoreADI.so`、`libstoreservicescore.so` 等属于 Apple 的专有材料，
-> 请自行从你合法拥有的设备/安装包中取得，并遵守所在地法律与 Apple 的服务条款。
-> **不要提交进 git。**
+> 请自行从你合法拥有的设备或安装包中取得。详见 `NOTICE`。
 
 ---
 
@@ -53,39 +52,46 @@ gh release download wrapper.arm64.latest -R WorldObservationLog/wrapper \
 
 ## 构建
 
-前提：`clang` `lld`（`apt install clang lld`）、Go 与 `gh`（取官方包）。
+前提：`clang` `lld`（`apt install clang lld`）、`gh`、`python3`。
 
 ```bash
-# 1. NDK sysroot（只需 51MB，不是整包 717MB）
+# 1. 依赖源码（cJSON v1.7.19 + Dobby 固定 commit）
+./scripts/fetch_deps.sh
+
+# 2. NDK sysroot（按需抽取约 51MB，而不是整包 717MB）
 python3 scripts/fetch_sysroot.py
+# Android 版 compiler-rt（系统的 clang 不自带），路径按你的 clang 版本调整
 cp ndk/usr/lib/aarch64-linux-android/libclang_rt.builtins-aarch64-android.a \
    /usr/lib/llvm-18/lib/clang/18/lib/linux/
 
-# 2. Dobby
+# 3. Dobby
 ./scripts/build_dobby.sh
 
-# 3. Apple 原生库：优先取本仓库 vendor 附件，取不到再回退上游发布包
+# 4. Apple 原生库（从上游官方 arm64 包提取；本仓库不分发这些二进制）
 ./scripts/fetch_official_arm64.sh
 
-# 4. wrapper 源码（锁定 commit，应用原项目三个补丁）
-curl -L https://codeload.github.com/WorldObservationLog/wrapper/tar.gz/2fd7e0eaef081f93cf687428b965674937832ba4 -o wrapper.tar.gz
-mkdir -p wsrc2 && tar xzf wrapper.tar.gz -C wsrc2 --strip-components=1
-git init -q wsrc2 && git -C wsrc2 add -A && git -C wsrc2 commit -qm base
+# 5. wrapper 源码 + 补丁
+curl -L https://codeload.github.com/WorldObservationLog/wrapper/tar.gz/2fd7e0eaef081f93cf687428b965674937832ba4 -o /tmp/wrapper.tar.gz
+mkdir -p wrapper-src && tar xzf /tmp/wrapper.tar.gz -C wrapper-src --strip-components=1
+git init -q wrapper-src
+git -C wrapper-src add -A && git -C wrapper-src -c user.email=a@b -c user.name=a commit -qm base
 for p in lite-native lite-session lite-store-bridge; do
-  git -C wsrc2 apply --recount --unidiff-zero patches/$p.patch
+  git -C wrapper-src apply --recount --unidiff-zero "patches/$p.patch"
 done
-# 两处 arm64 适配：playback.cpp 的 x86 寄存器钩子加守卫、offline 检查加开关
+git -C wrapper-src am patches/arm64-adaptations.patch   # 三处 arm64 适配
 
-# 5. 审计 + 生成 sret 跳板 + 构建
-ARM_GLOB="$PWD/amlibs-apple/*.so" python3 scripts/audit_abi.py
+# 6. 构建（sret 跳板清单 sret_needed.txt 已随仓库提供）
 ./scripts/build_lite3.sh
 
-# 6. 运行
+# 7. 运行
 ./scripts/run_lite3.sh &
-curl -s http://127.0.0.1:12341/status
+python3 -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:12341/status').read().decode())"
 ```
 
----
+预期输出：`{"code":0,"msg":"SUCCESS","data":{"regions":[]}}`
+
+> `sret_needed.txt` 是 ABI 审计的产物（16 个需要跳板的符号名，不含任何二进制）。
+> 如果你有另一套 ABI 的参考库，可以用 `scripts/audit_abi.py` 重新生成。
 
 ## arm64 移植的三个真问题
 

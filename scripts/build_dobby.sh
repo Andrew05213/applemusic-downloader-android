@@ -1,6 +1,6 @@
 #!/bin/bash
 # 手工构建 Dobby（arm64 Android），绕开其 CMake 对 NDK x86_64 宿主的假设。
-ROOT="${AMDL_ROOT:-/root/workspace}"
+ROOT="${AMDL_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 set -eu
 SYS=$ROOT/ndk
 D=$ROOT/dobby

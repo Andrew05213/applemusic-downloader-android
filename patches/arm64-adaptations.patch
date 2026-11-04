@@ -1,0 +1,119 @@
+From b28d5d02e87fb6465643e64121674d263594c49a Mon Sep 17 00:00:00 2001
+From: a <a@b>
+Date: Wed, 4 Nov 2026 19:56:29 +0800
+Subject: [PATCH] arm64 adaptations
+
+---
+ lite/auth.cpp     | 35 ++++++++++++++++++++++++++++++++---
+ lite/playback.cpp | 20 ++++++++++++++++++++
+ lite/tokens.cpp   |  2 ++
+ 3 files changed, 54 insertions(+), 3 deletions(-)
+
+diff --git a/lite/auth.cpp b/lite/auth.cpp
+index e42f50c..c3f247e 100644
+--- a/lite/auth.cpp
++++ b/lite/auth.cpp
+@@ -6,6 +6,7 @@
+ #include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
++#include <strings.h>
+ #include <string>
+ #include <unistd.h>
+ 
+@@ -39,10 +40,38 @@ void dialogHandler(long j, struct shared_ptr* protoDialogPtr,
+         }
+         LOG_DEBUG("signin button selected: %s", found ? "yes" : "NO");
+     } else {
++        /* 非登录对话框（通常出现在 2FA 验证方式选择）。
++           打印全部按钮，并支持运行时选择：
++             AMDL_DIALOG_SELECT=<标题子串，不区分大小写>
++             AMDL_DIALOG_SELECT_INDEX=<序号，从 0 开始> */
++        const char *selSub = getenv("AMDL_DIALOG_SELECT");
++        const char *selIdx = getenv("AMDL_DIALOG_SELECT_INDEX");
++        int wantSub = -1, wantIdx = selIdx ? atoi(selIdx) : -1, idx = 0;
++        struct shared_ptr *pick = nullptr;
+         for (struct shared_ptr* b = (struct shared_ptr*)butVec->begin;
+-             b != (struct shared_ptr*)butVec->end; ++b) {
+-            LOG_INFO("button %p: %s", b->obj,
+-                     std_string_data(_ZNK17storeservicescore14ProtocolButton5titleEv(b->obj)));
++             b != (struct shared_ptr*)butVec->end; ++b, ++idx) {
++            const char *t = std_string_data(_ZNK17storeservicescore14ProtocolButton5titleEv(b->obj));
++            fprintf(stderr, "[DIALOG] button[%d] = '%s'\n", idx, t ? t : "(null)");
++            if (t && selSub && *selSub) {
++                size_t n = strlen(selSub);
++                for (size_t i = 0; t[i]; ++i) {
++                    if (strncasecmp(t + i, selSub, n) == 0) { wantSub = idx; break; }
++                }
++            }
++            if (idx == wantIdx) pick = b;
++        }
++        if (!pick && wantSub >= 0) {
++            idx = 0;
++            for (struct shared_ptr* b = (struct shared_ptr*)butVec->begin;
++                 b != (struct shared_ptr*)butVec->end; ++b, ++idx) {
++                if (idx == wantSub) { pick = b; break; }
++            }
++        }
++        if (pick) {
++            _ZN17storeservicescore22ProtocolDialogResponse17setSelectedButtonERKNSt6__ndk110shared_ptrINS_14ProtocolButtonEEE(diagResp.obj, pick);
++            fprintf(stderr, "[DIALOG] selected index %d\n", wantSub >= 0 ? wantSub : wantIdx);
++        } else {
++            fprintf(stderr, "[DIALOG] 未选择任何按钮\n");
+         }
+     }
+     _ZN20androidstoreservices28AndroidPresentationInterface28handleProtocolDialogResponseERKlRKNSt6__ndk110shared_ptrIN17storeservicescore22ProtocolDialogResponseEEE(
+diff --git a/lite/playback.cpp b/lite/playback.cpp
+index 7abdcef..54178c7 100644
+--- a/lite/playback.cpp
++++ b/lite/playback.cpp
+@@ -114,6 +114,25 @@ static uint64_t g_cap_rcx, g_cap_rax, g_cap_rdx, g_cap_r9, g_cap_rbp;
+ extern "C" void r1_capture_cb(RegisterContext* ctx, const HookEntryInfo* info) {
+     (void)info;
+     if (!g_cap_armed || g_cap_done) return;
++#if !defined(__x86_64__)
++    /* arm64：上游按 x86-64 调用约定读 rsi/r9/rbp/rcx。arm64 需要重新推导，
++       这里先记录触发瞬间的寄存器现场，供后续定位等效位置。 */
++    static int armed_dumps = 0;
++    if (armed_dumps < 3) {
++        armed_dumps++;
++        fprintf(stderr,
++                "[R1-ARM64] sp=%p x0=%p x1=%p x2=%p x3=%p x4=%p x5=%p x6=%p "
++                "x7=%p x8=%p x19=%p x20=%p fp=%p\n",
++                (void *)(uintptr_t)ctx->sp, (void *)(uintptr_t)ctx->general.regs.x0,
++                (void *)(uintptr_t)ctx->general.regs.x1, (void *)(uintptr_t)ctx->general.regs.x2,
++                (void *)(uintptr_t)ctx->general.regs.x3, (void *)(uintptr_t)ctx->general.regs.x4,
++                (void *)(uintptr_t)ctx->general.regs.x5, (void *)(uintptr_t)ctx->general.regs.x6,
++                (void *)(uintptr_t)ctx->general.regs.x7, (void *)(uintptr_t)ctx->general.regs.x8,
++                (void *)(uintptr_t)ctx->general.regs.x19, (void *)(uintptr_t)ctx->general.regs.x20,
++                (void *)(uintptr_t)ctx->fp);
++    }
++    return;
++#else
+     if ((ctx->general.regs.rsi & 0xff) != 8) return;
+     uint64_t r9 = ctx->general.regs.r9;
+     uint64_t rbp = ctx->general.regs.rbp;
+@@ -125,6 +144,7 @@ extern "C" void r1_capture_cb(RegisterContext* ctx, const HookEntryInfo* info) {
+     g_cap_r9 = r9;
+     g_cap_rbp = rbp;
+     g_cap_done = 1;
++#endif
+ }
+ 
+ static int _find_lib_cb(struct dl_phdr_info* info, size_t size, void* data) {
+diff --git a/lite/tokens.cpp b/lite/tokens.cpp
+index bb06944..698edeb 100644
+--- a/lite/tokens.cpp
++++ b/lite/tokens.cpp
+@@ -186,6 +186,8 @@ static char* get_account_storefront_id_impl() {
+ }
+ 
+ int offline_available_impl() {
++    /* 未登录时会向 Apple 查询订阅状态，可能长时间阻塞或崩溃 */
++    if (getenv("AMDL_SKIP_OFFLINE_CHECK")) return 0;
+     struct shared_ptr* fairplay = (struct shared_ptr*)malloc(16);
+     memset(fairplay, 0, 16);
+     _ZN17storeservicescore14RequestContext8fairPlayEv(fairplay, g_reqCtx.obj);
+-- 
+2.43.0
+

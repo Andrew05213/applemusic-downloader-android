@@ -7,7 +7,7 @@ import http.client
 import io
 import os
 
-ROOT = os.environ.get("AMDL_ROOT", "/root/workspace")
+ROOT = os.environ.get("AMDL_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import sys
 import time
 import zipfile

@@ -1,21 +1,15 @@
 #!/bin/bash
 # 取得与 wrapper 源码匹配的 arm64 Apple 库。
-# 优先用本仓库的 vendor 附件；取不到则回退到上游 wrapper.arm64.latest。
+#
+# 本仓库不分发这些二进制（它们是 Apple 的专有材料），脚本从上游
+# WorldObservationLog/wrapper 的官方 arm64 发布包中提取。
+# 也可以自行从你合法拥有的设备/安装包中取得，放到 amlibs-apple/ 即可。
 set -eu
 cd "$(dirname "$0")/.."
 DEST=amlibs-apple
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-if gh release download vendor-arm64 -R Andrew05213/applemusic-downloader-android \
-      -p 'amlibs-apple.tar.gz' -D "$TMP" --clobber 2>/dev/null; then
-  rm -rf "$DEST"; mkdir -p "$DEST"
-  tar xzf "$TMP/amlibs-apple.tar.gz" -C "$DEST"
-  echo "已从本仓库 vendor 附件取得 $(ls "$DEST" | wc -l) 个库 → $DEST/"
-  exit 0
-fi
-
-echo "vendor 附件不可用，回退到上游发布包…"
 gh release download wrapper.arm64.latest -R WorldObservationLog/wrapper \
    -p 'Wrapper.arm64.latest.zip' -D "$TMP" --clobber
 python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" \

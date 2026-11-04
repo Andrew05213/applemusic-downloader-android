@@ -1,6 +1,6 @@
 #!/bin/bash
 # 官方匹配库 + 干净构建的运行环境
-ROOT="${AMDL_ROOT:-/root/workspace}"
+ROOT="${AMDL_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 BASE=$ROOT
 APEXP=""
 while read -r d; do

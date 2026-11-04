@@ -1,6 +1,6 @@
 #!/bin/bash
 # lite 引擎在本机运行所需的环境（被 run_lite.sh 和登录脚本共用）
-ROOT="${AMDL_ROOT:-/root/workspace}"
+ROOT="${AMDL_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 BASE=$ROOT
 APEXP=""
 while read -r d; do

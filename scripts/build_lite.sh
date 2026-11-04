@@ -1,6 +1,6 @@
 #!/bin/bash
 # 把 wrapper 的 lite 交叉编译成 arm64 Android 可执行文件。
-ROOT="${AMDL_ROOT:-/root/workspace}"
+ROOT="${AMDL_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 set -eu
 SYS=$ROOT/ndk
 API=$SYS/usr/lib/aarch64-linux-android/24
@@ -8,7 +8,7 @@ W=$ROOT/wsrc
 CJ=$ROOT/cjson
 DB=$ROOT/build/dobby
 AML=$ROOT/amlibs
-RP=$ROOT/amd-native/native-runtime
+RP=$ROOT/patches/runtime
 OUT=$ROOT/build/lite
 mkdir -p "$OUT/obj"
 rm -f "$OUT"/obj/*.o

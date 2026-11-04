@@ -21,3 +21,15 @@ wsrc2/
 *.log
 __pycache__/
 *.pyc
+cjson/
+dobby/
+
+# 本地构建用的符号链接与目录
+amlibs-apple
+ndk
+build
+wsrc
+wsrc2
+cjson
+dobby
+wrapper-src

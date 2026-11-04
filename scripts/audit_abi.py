@@ -13,7 +13,7 @@ AArch64 放 x8。wrapper 的 import.h 按 x86-64 写死，所以在 arm64 上
 import glob
 import os
 
-ROOT = os.environ.get("AMDL_ROOT", "/root/workspace")
+ROOT = os.environ.get("AMDL_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import re
 import subprocess
 
